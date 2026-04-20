@@ -2,55 +2,39 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Cartas Pokémon</title>
+<title>Cartas Pokémon Pro</title>
 
 <style>
 body {
     font-family: 'Segoe UI', sans-serif;
     text-align: center;
     background: linear-gradient(135deg, #ffd6e0, #d6f0ff);
-    margin: 0;
-    padding: 0;
 }
 
 h1 {
-    margin-top: 30px;
-    color: #444;
-}
-
-.container {
     margin-top: 20px;
 }
 
-input {
-    padding: 12px;
-    width: 220px;
+input, select {
+    padding: 10px;
     border-radius: 20px;
     border: none;
-    outline: none;
-    box-shadow: 0 0 5px #aaa;
+    margin: 10px;
 }
 
 button {
-    padding: 12px 20px;
-    border: none;
+    padding: 10px 20px;
     border-radius: 20px;
-    background: #a0c4ff;
+    border: none;
+    background: #6699ff;
     color: white;
     cursor: pointer;
-    margin-left: 10px;
-    transition: 0.3s;
-}
-
-button:hover {
-    background: #6699ff;
 }
 
 #resultados {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    margin-top: 30px;
 }
 
 .card {
@@ -60,87 +44,118 @@ button:hover {
     width: 200px;
     border-radius: 20px;
     box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-    transition: transform 0.3s;
+    transition: 0.3s;
+    opacity: 0;
+    transform: translateY(30px);
+    animation: aparecer 0.5s forwards;
 }
 
 .card:hover {
-    transform: scale(1.05);
+    transform: scale(1.08) rotate(1deg);
 }
 
-.card h3 {
-    margin: 10px 0;
-    color: #333;
+@keyframes aparecer {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
-.card p {
-    margin: 5px 0;
-    color: #666;
+img {
+    width: 120px;
 }
 
-.card img {
-    margin-top: 10px;
-    border-radius: 10px;
-}
-
-.footer {
-    margin-top: 40px;
-    padding: 10px;
-    color: #555;
-}
 </style>
-
 </head>
 
 <body>
 
-<h1>✨ Cartas Pokémon ✨</h1>
+<h1>✨ Pokédex Interactiva ✨</h1>
 
-<div class="container">
-    <input type="text" id="busqueda" placeholder="Ej: pikachu">
-    <button onclick="buscar()">Buscar</button>
-</div>
+<input type="text" id="busqueda" placeholder="Buscar Pokémon...">
+<select id="filtro">
+    <option value="">Todos</option>
+    <option value="fire">Fuego</option>
+    <option value="water">Agua</option>
+    <option value="grass">Planta</option>
+    <option value="electric">Eléctrico</option>
+    <option value="poison">Veneno</option>
+    <option value="dragon">Dragón</option>
+    <option value="fairy">Hada</option>
+</select>
+
+<button onclick="buscar()">Buscar</button>
 
 <div id="resultados"></div>
 
-<div class="footer">
-    Hecho con Java + HTML 💻
-</div>
-
 <script>
-function buscar() {
-    let nombre = document.getElementById("busqueda").value;
+const nombres = [
+"bulbasaur","ivysaur","venusaur","charmander","charmeleon","charizard",
+"squirtle","wartortle","blastoise","pikachu","raichu","sandshrew",
+"nidoran-f","nidorina","nidoqueen","nidoran-m","nidorino","nidoking",
+"clefairy","clefable","vulpix","ninetales","jigglypuff","wigglytuff",
+"zubat","golbat","oddish","gloom","vileplume","paras",
+"diglett","dugtrio","meowth","persian","psyduck","golduck",
+"growlithe","arcanine","poliwag","poliwhirl","poliwrath",
+"abra","kadabra","alakazam","machop","machoke","machamp",
+"bellsprout","weepinbell"
+];
 
-    fetch(`http://localhost:4000/cartas?nombre=${nombre}`)
-    .then(res => res.json())
-    .then(data => {
+let pokemons = [];
 
-        let contenedor = document.getElementById("resultados");
-        contenedor.innerHTML = "";
+async function cargar() {
+    for (let nombre of nombres) {
+        let res = await fetch(`https://pokeapi.co/api/v2/pokemon/${nombre}`);
+        let data = await res.json();
 
-        if (data.length === 0) {
-            contenedor.innerHTML = "<p>No se encontraron resultados 😢</p>";
-            return;
-        }
-
-        data.forEach(carta => {
-
-            let div = document.createElement("div");
-            div.className = "card";
-
-            div.innerHTML = `
-                <h3>${carta.nombre}</h3>
-                <p><b>Tipo:</b> ${carta.tipo}</p>
-                <p><b>HP:</b> ${carta.hp}</p>
-                <img src="${carta.imagen}" width="150">
-            `;
-
-            contenedor.appendChild(div);
+        pokemons.push({
+            nombre: data.name,
+            tipo: data.types[0].type.name,
+            hp: data.stats[0].base_stat,
+            imagen: data.sprites.front_default
         });
-    })
-    .catch(() => {
-        alert("⚠️ El servidor no está corriendo");
+    }
+
+    mostrar(pokemons);
+}
+
+function buscar() {
+    let texto = document.getElementById("busqueda").value.toLowerCase();
+    let tipo = document.getElementById("filtro").value;
+
+    let filtrados = pokemons.filter(p =>
+        p.nombre.includes(texto) &&
+        (tipo === "" || p.tipo === tipo)
+    );
+
+    mostrar(filtrados);
+}
+
+function mostrar(lista) {
+    let cont = document.getElementById("resultados");
+    cont.innerHTML = "";
+
+    if (lista.length === 0) {
+        cont.innerHTML = "<p>No hay resultados 😢</p>";
+        return;
+    }
+
+    lista.forEach(p => {
+        let div = document.createElement("div");
+        div.className = "card";
+
+        div.innerHTML = `
+            <h3>${p.nombre}</h3>
+            <p>Tipo: ${p.tipo}</p>
+            <p>HP: ${p.hp}</p>
+            <img src="${p.imagen}">
+        `;
+
+        cont.appendChild(div);
     });
 }
+
+cargar();
 </script>
 
 </body>
